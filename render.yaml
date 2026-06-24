@@ -1,0 +1,33 @@
+# Blueprint do Render — suba o repositório e o Render lê este arquivo.
+# (Render Dashboard -> New -> Blueprint -> aponte para o repo)
+services:
+  - type: web
+    name: supervisao-bot
+    runtime: node
+    plan: starter            # Starter (~US$7/mês): não hiberna, segura o webhook 24/7
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: data
+      mountPath: /data       # disco persistente: estado das conversas + leads
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: PROVIDER
+        value: uazapi
+      - key: SITE_URL
+        value: supervisao.com.br
+      # Preencha estes no painel do Render (Environment) — sync:false = secretos:
+      - key: PUBLIC_URL
+        sync: false
+      - key: UAZAPI_BASE_URL
+        sync: false
+      - key: UAZAPI_TOKEN
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: OWNER_NUMBER
+        sync: false
