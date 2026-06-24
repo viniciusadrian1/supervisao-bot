@@ -22,6 +22,17 @@ export const config = {
     adminToken: process.env.UAZAPI_ADMIN_TOKEN || '',
   },
 
+  // Camada de IA (OpenAI) — SÓ pra ENTENDER (classificar objeção / extrair dado).
+  // As respostas continuam saindo do roteiro fixo. Opcional: sem chave, cai nas regras.
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || '',
+    enabled: !!(process.env.OPENAI_API_KEY || ''),
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    baseUrl: stripSlash(process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'),
+    reasoningEffort: process.env.OPENAI_REASONING_EFFORT || 'low', // só p/ modelos GPT-5.x/o*
+    timeoutMs: int(process.env.OPENAI_TIMEOUT_MS, 8000),
+  },
+
   video: {
     url: process.env.VIDEO_URL || '',
     file: process.env.VIDEO_FILE || 'demo.mp4',

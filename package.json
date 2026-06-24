@@ -12,7 +12,9 @@
     "setup:webhook": "node scripts/setup-webhook.js",
     "connect": "node scripts/connect.js",
     "status": "node scripts/status.js",
-    "simulate": "node scripts/simulate.js"
+    "simulate": "node scripts/simulate.js",
+    "test:nlu": "node scripts/test-nlu.js",
+    "test:ai": "node scripts/test-ai-integration.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

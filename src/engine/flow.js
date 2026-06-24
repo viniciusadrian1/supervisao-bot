@@ -1,6 +1,7 @@
 import { getProvider } from '../providers/index.js';
-import { M } from '../messages/catalog.js';
+import { M, OBJ } from '../messages/catalog.js';
 import { detectObjection } from './objections.js';
+import { interpret } from '../nlu/index.js';
 import { validateAddress } from './validators.js';
 import { getConversation, saveConversation, appendLead } from '../store/index.js';
 import { typingDelay, sleep } from '../util/humanize.js';
@@ -75,11 +76,18 @@ function prettyAddress(d) {
   return s;
 }
 
-/** Reconhece a forma de pagamento, ou null se não entendeu. */
+/** Reconhece a forma de pagamento por regras, ou null se não entendeu. */
 function normalizePayment(text) {
   const t = (text || '').toLowerCase();
   if (/(à\s*vista|a\s*vista|\bvista\b|10\s*%|desconto|pix)/.test(t)) return 'À vista (10% de desconto)';
   if (/(parcel|6\s*x|cart|crédito|credito|vezes)/.test(t)) return 'Parcelado em até 6x sem juros';
+  return null;
+}
+
+/** Mapeia a categoria de pagamento da IA para o rótulo fixo do roteiro. */
+function mapPayment(kind) {
+  if (kind === 'vista') return 'À vista (10% de desconto)';
+  if (kind === 'parcelado') return 'Parcelado em até 6x sem juros';
   return null;
 }
 
@@ -147,7 +155,13 @@ export async function handleIncoming(msg) {
   }
 
   const text = msg.text || '';
-  const obj = conv.step !== STEP.NEW ? detectObjection(text) : null;
+
+  // Interpreta a mensagem: IA (se houver chave OpenAI) entende objeção/nome/pagamento;
+  // sem IA (ou se ela falhar) cai nas regras determinísticas. As RESPOSTAS são sempre
+  // as do roteiro fixo — a IA só classifica/extrai.
+  const ai = conv.step !== STEP.NEW ? await interpret(conv.step, text) : null;
+  const objKey = ai ? ai.objection : detectObjection(text)?.key || null;
+  const obj = objKey && OBJ[objKey] ? { key: objKey, reply: OBJ[objKey]() } : null;
 
   switch (conv.step) {
     case STEP.NEW: {
@@ -164,7 +178,7 @@ export async function handleIncoming(msg) {
         await send(phone, obj.reply);
         return;
       }
-      const nome = cleanName(text);
+      const nome = ai ? ai.name : cleanName(text);
       if (!nome) {
         await saveConversation(phone, conv);
         await send(phone, M.nameReask());
@@ -221,7 +235,13 @@ export async function handleIncoming(msg) {
     }
 
     case STEP.AWAITING_SITE: {
-      // resposta livre — tratamos como o site (sem detecção de objeção p/ não travar)
+      // Objeção só é tratada aqui se veio da IA (sem IA, palavra-chave daria falso
+      // positivo numa resposta livre — então tratamos como o site).
+      if (obj && ai) {
+        await saveConversation(phone, conv);
+        await send(phone, obj.reply);
+        return;
+      }
       conv.data.site = text.trim();
       conv.step = STEP.AWAITING_UNITS;
       await saveConversation(phone, conv);
@@ -230,6 +250,11 @@ export async function handleIncoming(msg) {
     }
 
     case STEP.AWAITING_UNITS: {
+      if (obj && ai) {
+        await saveConversation(phone, conv);
+        await send(phone, obj.reply);
+        return;
+      }
       conv.data.unidades = text.trim();
       conv.step = STEP.AWAITING_PAYMENT;
       await saveConversation(phone, conv);
@@ -246,7 +271,7 @@ export async function handleIncoming(msg) {
         await send(phone, M.paymentReask());
         return;
       }
-      const pay = normalizePayment(text);
+      const pay = ai ? mapPayment(ai.payment) : normalizePayment(text);
       if (!pay) {
         await saveConversation(phone, conv);
         await send(phone, M.paymentReask());

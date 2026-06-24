@@ -53,6 +53,9 @@ supervisao-bot/
 │   │   ├── objections.js      # detector + respostas rápidas
 │   │   ├── validators.js      # CEP + número + ViaCEP
 │   │   └── idle.js            # reengajamento por inatividade
+│   ├── nlu/                   # IA OPCIONAL (OpenAI): só ENTENDE, não responde
+│   │   ├── index.js           # interpret() com fallback p/ regras
+│   │   └── openai.js          # chamada à OpenAI (Structured Outputs)
 │   ├── messages/catalog.js    # TODA a copy (edite aqui sem mexer na lógica)
 │   ├── store/index.js         # persistência (JSON + JSONL)
 │   └── util/                  # logger, lock por contato, humanização
@@ -141,6 +144,22 @@ Cada lead qualificado é gravado em `DATA_DIR/leads.jsonl` (uma linha JSON por l
 Defina `OWNER_NUMBER` se quiser também um **aviso** num número de gestor a cada lead.
 
 ---
+
+## 🧠 Camada de IA (opcional — OpenAI)
+O bot funciona **sem IA** (nas regras determinísticas). Se você definir `OPENAI_API_KEY`,
+ele liga uma camada de **entendimento**: a IA classifica a mensagem do lead (qual objeção
+é, qual o nome, qual a forma de pagamento) mesmo dita de qualquer jeito — mas **as respostas
+continuam saindo do roteiro fixo** (`messages/catalog.js`). A IA **nunca** escreve texto pro
+cliente, então não há risco de inventar preço ou promessa.
+
+- **Ligar:** defina `OPENAI_API_KEY` (e, se quiser, `OPENAI_MODEL`) no `.env`/Render.
+- **Modelo:** padrão `gpt-4o-mini` (barato e disponível em qualquer conta). Recomendado
+  atual: `gpt-5.4-nano`/`gpt-5.4-mini`. O código se ajusta sozinho aos parâmetros de cada
+  geração (GPT-5.x usa `max_completion_tokens`/`reasoning_effort`; gpt-4o-mini usa `temperature`).
+- **Custo:** ~frações de centavo por mensagem (1 classificação curta por mensagem).
+- **À prova de falha:** se a OpenAI cair, demorar ou a chave faltar, o bot **volta sozinho
+  pras regras** — o atendimento nunca para.
+- **Testar a normalização (sem rede):** `npm run test:nlu`.
 
 ## 🛡️ Anti-ban (API não-oficial)
 A UAZAPI conecta como WhatsApp comum — há risco real de bloqueio do número. Mitigações
