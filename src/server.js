@@ -17,6 +17,16 @@ const app = express();
 app.set('trust proxy', 1); // Render fica atrás de proxy — necessário p/ req.ip real (rate limit do painel)
 app.use(express.json({ limit: '2mb' }));
 
+// DEBUG (temporário): registra qualquer POST que bata em /webhook (mascara o segredo).
+// Se aparecer "POST em /webhook/***" mas NÃO aparecer "webhook <- payload", o segredo
+// registrado na UAZAPI está diferente do WEBHOOK_SECRET do Render (404). Remover depois.
+app.use((req, _res, next) => {
+  if (req.method === 'POST' && req.path.startsWith('/webhook')) {
+    log.info('POST em', req.path.replace(/(\/webhook\/).+/, '$1***'));
+  }
+  next();
+});
+
 // Vídeo demo servido pelo próprio bot -> URL .mp4 direta (entrega nativa no WhatsApp).
 app.use(
   '/media',
@@ -59,6 +69,7 @@ if (config.panel.enabled) {
 
 app.post(webhookPath, (req, res) => {
   res.sendStatus(200); // responde rápido — a UAZAPI exige webhook ágil
+  log.info('webhook <- payload:', JSON.stringify(req.body).slice(0, 1200)); // DEBUG (remover depois)
   let msg;
   try {
     msg = provider.parseIncoming(req.body);
@@ -66,7 +77,11 @@ app.post(webhookPath, (req, res) => {
     log.error('parseIncoming:', e.message);
     return;
   }
-  if (!msg) return; // não é mensagem de texto de lead
+  if (!msg) {
+    log.info('webhook: IGNORADO (parseIncoming=null — não reconheceu como msg de texto de lead)');
+    return;
+  }
+  log.info('webhook: msg de', msg.from, '| isText=', msg.isText, '| texto=', JSON.stringify((msg.text || '').slice(0, 120)));
   withLock(msg.from, () => handleIncoming(msg)).catch((e) =>
     log.error('handleIncoming:', e?.stack || e?.message || e)
   );
