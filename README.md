@@ -57,6 +57,9 @@ supervisao-bot/
 │   │   ├── index.js           # interpret() com fallback p/ regras
 │   │   └── openai.js          # chamada à OpenAI (Structured Outputs)
 │   ├── messages/catalog.js    # TODA a copy (edite aqui sem mexer na lógica)
+│   ├── panel/                 # PAINEL read-only em /painel (fluxo, copy, funil, ao vivo)
+│   │   ├── routes.js  auth.js  flowmap.js  stats.js
+│   │   └── public/            # index.html + styles.css + app.js (sem build)
 │   ├── store/index.js         # persistência (JSON + JSONL)
 │   └── util/                  # logger, lock por contato, humanização
 ├── scripts/                   # connect, status, setup:webhook, simulate
@@ -144,6 +147,23 @@ Cada lead qualificado é gravado em `DATA_DIR/leads.jsonl` (uma linha JSON por l
 Defina `OWNER_NUMBER` se quiser também um **aviso** num número de gestor a cada lead.
 
 ---
+
+## 📊 Painel de visualização (read-only) — `/painel`
+Um painel web servido pelo **próprio bot** (mesmo serviço, mesmo deploy) para acompanhar
+o atendimento em tempo real. Mostra:
+- **Fluxo** — o desenho da conversa em nós (estilo ManyChat/Miro), com o copy de cada etapa
+  e quantos leads estão "aqui agora".
+- **Copy** — todas as mensagens do bot + re-perguntas + respostas de objeção.
+- **Conversão** — funil (quanto cai em cada etapa), % de qualificação, objeções mais comuns,
+  leads por dia.
+- **Ao vivo** — leads recentes com a etapa atual, atualizando sozinho (polling a cada 5s).
+
+**Ligar:** defina `PANEL_PASSWORD` (e opcionalmente `PANEL_USER`, padrão `admin`) no `.env`/Render.
+Acesse em **`PUBLIC_URL/painel`** e faça login pelo navegador. **Sem `PANEL_PASSWORD`, o painel
+fica desligado** (rota responde 503). É **read-only** — não edita o fluxo nem o copy.
+
+> Privacidade: o painel mostra nomes e etapas dos leads (telefone mascarado). Fica atrás de
+> login e os dados não saem do servidor. Use uma senha forte.
 
 ## 🧠 Camada de IA (opcional — OpenAI)
 O bot funciona **sem IA** (nas regras determinísticas). Se você definir `OPENAI_API_KEY`,

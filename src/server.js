@@ -8,11 +8,13 @@ import { getProvider } from './providers/index.js';
 import { handleIncoming } from './engine/flow.js';
 import { startIdleWatcher } from './engine/idle.js';
 import { withLock } from './util/lock.js';
+import { panelRouter } from './panel/routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const provider = getProvider();
 
 const app = express();
+app.set('trust proxy', 1); // Render fica atrás de proxy — necessário p/ req.ip real (rate limit do painel)
 app.use(express.json({ limit: '2mb' }));
 
 // Vídeo demo servido pelo próprio bot -> URL .mp4 direta (entrega nativa no WhatsApp).
@@ -28,6 +30,9 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, provider: provider.name, video: videoUrl() || null });
 });
 
+// Painel de visualização (read-only), protegido por senha — em /painel.
+app.use('/painel', panelRouter);
+
 // Caminho do webhook (com segredo no path para dificultar chamadas indevidas).
 const webhookPath = config.webhookSecret ? `/webhook/${config.webhookSecret}` : '/webhook';
 const webhookLogPath = config.webhookSecret ? '/webhook/***' : '/webhook';
@@ -42,6 +47,14 @@ if (!config.webhookSecret) {
     process.exit(1);
   }
   log.warn(aviso);
+}
+
+// Painel exposto com senha fraca é risco (mostra dados de leads). Avisa alto — mas
+// NÃO derruba o bot (o painel é secundário; o core não pode cair por causa dele).
+if (config.panel.enabled) {
+  const w = config.panel.password;
+  const fraca = w.length < 12 || ['painel123', 'admin', 'senha', 'password', '123456'].includes(w.toLowerCase());
+  if (fraca) log.warn('PANEL_PASSWORD fraca: use 12+ caracteres — o painel expõe dados de leads.');
 }
 
 app.post(webhookPath, (req, res) => {
@@ -65,6 +78,9 @@ initStore()
       log.info(`Bot no ar na porta ${config.port} | provider=${provider.name}`);
       log.info(`Webhook: POST ${config.publicUrl || '(defina PUBLIC_URL)'}${webhookLogPath}`);
       log.info(`Vídeo:   ${videoUrl() || '(defina PUBLIC_URL ou VIDEO_URL)'}`);
+      log.info(
+        `Painel:  ${config.panel.enabled ? `${config.publicUrl || ''}/painel (login: ${config.panel.user})` : 'DESLIGADO (defina PANEL_PASSWORD)'}`
+      );
       startIdleWatcher();
     });
   })

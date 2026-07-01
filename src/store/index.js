@@ -69,3 +69,24 @@ export async function listConversations() {
 export async function appendLead(summary) {
   await fs.appendFile(leadsFile, JSON.stringify(summary) + '\n');
 }
+
+/** Lê todos os leads qualificados (JSONL) — usado pelo painel. */
+export async function listLeads() {
+  try {
+    const raw = await fs.readFile(leadsFile, 'utf8');
+    return raw
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => {
+        try {
+          return JSON.parse(l);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+  } catch (e) {
+    if (e.code !== 'ENOENT') log.error('listLeads', e.message);
+    return [];
+  }
+}

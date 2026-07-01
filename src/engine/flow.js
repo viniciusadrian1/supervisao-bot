@@ -91,7 +91,20 @@ function mapPayment(kind) {
   return null;
 }
 
+/** Contabiliza uma objeção respondida (por tipo) — alimenta o painel. */
+function recordObjection(conv, key) {
+  if (!key) return;
+  conv.objections = conv.objections || {};
+  conv.objections[key] = (conv.objections[key] || 0) + 1;
+}
+
 async function onHandoff(conv) {
+  // Idempotente: se o lead já foi registrado (ex.: retomado por #bot e re-qualificado),
+  // não duplica a linha no leads.jsonl nem o aviso ao gestor.
+  if (conv.leadAppended) return;
+  conv.leadAppended = true;
+  await saveConversation(conv.phone, conv);
+
   await appendLead({
     phone: conv.phone,
     nome: conv.data.nome || '',
@@ -174,6 +187,7 @@ export async function handleIncoming(msg) {
     case STEP.AWAITING_NAME: {
       // pergunta/objeção tem prioridade sobre extrair nome
       if (obj) {
+        recordObjection(conv, obj.key);
         await saveConversation(phone, conv);
         await send(phone, obj.reply);
         return;
@@ -213,6 +227,7 @@ export async function handleIncoming(msg) {
         break;
       }
       // Não validou: se for objeção, responde; senão re-pergunta.
+      if (obj) recordObjection(conv, obj.key);
       await saveConversation(phone, conv);
       if (obj) {
         await send(phone, obj.reply);
@@ -224,6 +239,7 @@ export async function handleIncoming(msg) {
 
     case STEP.AWAITING_POSTVIDEO: {
       if (obj) {
+        recordObjection(conv, obj.key);
         await saveConversation(phone, conv);
         await send(phone, obj.reply);
         return;
@@ -238,6 +254,7 @@ export async function handleIncoming(msg) {
       // Objeção só é tratada aqui se veio da IA (sem IA, palavra-chave daria falso
       // positivo numa resposta livre — então tratamos como o site).
       if (obj && ai) {
+        recordObjection(conv, obj.key);
         await saveConversation(phone, conv);
         await send(phone, obj.reply);
         return;
@@ -251,6 +268,7 @@ export async function handleIncoming(msg) {
 
     case STEP.AWAITING_UNITS: {
       if (obj && ai) {
+        recordObjection(conv, obj.key);
         await saveConversation(phone, conv);
         await send(phone, obj.reply);
         return;
@@ -266,6 +284,7 @@ export async function handleIncoming(msg) {
       // Objeção tem prioridade: "tem juros no parcelamento?" é pergunta, não escolha
       // (senão "parcelamento" casaria como "parcelado"). Responde e re-pergunta.
       if (obj) {
+        recordObjection(conv, obj.key);
         await saveConversation(phone, conv);
         await send(phone, obj.reply);
         await send(phone, M.paymentReask());

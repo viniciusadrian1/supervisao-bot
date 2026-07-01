@@ -49,6 +49,14 @@ export const config = {
     minutes: int(process.env.IDLE_MINUTES, 30),
     checkEveryMs: int(process.env.IDLE_CHECK_MS, 60000),
   },
+
+  // Painel de visualização (read-only) em /painel. Protegido por senha (Basic Auth).
+  // Sem PANEL_PASSWORD o painel fica desativado.
+  panel: {
+    user: process.env.PANEL_USER || 'admin',
+    password: process.env.PANEL_PASSWORD || '',
+    enabled: !!(process.env.PANEL_PASSWORD || ''),
+  },
 };
 
 /** URL pública do vídeo demo (override por VIDEO_URL, ou servido pelo próprio bot). */

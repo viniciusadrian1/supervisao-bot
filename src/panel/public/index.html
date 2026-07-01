@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Painel · Supervisão 360 — Bot</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="brand__mark">S360</span>
+      <div>
+        <div class="brand__title">Painel · Supervisão 360 — Bot</div>
+        <div class="brand__sub">Visualização em tempo real · somente leitura</div>
+      </div>
+    </div>
+    <div class="status">
+      <span class="dot" id="liveDot"></span>
+      <span id="updatedLabel">conectando…</span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab is-active" data-tab="fluxo">Fluxo</button>
+    <button class="tab" data-tab="copy">Copy</button>
+    <button class="tab" data-tab="conversao">Conversão</button>
+    <button class="tab" data-tab="aovivo">Ao vivo</button>
+  </nav>
+
+  <section class="kpis" id="kpis">
+    <div class="kpi"><div class="kpi__lbl">Leads</div><div class="kpi__val" id="kpiTotal">—</div></div>
+    <div class="kpi"><div class="kpi__lbl">Qualificados</div><div class="kpi__val" id="kpiQual">—</div></div>
+    <div class="kpi"><div class="kpi__lbl">Conversão</div><div class="kpi__val kpi__val--green" id="kpiConv">—</div></div>
+    <div class="kpi"><div class="kpi__lbl">Ativos agora</div><div class="kpi__val" id="kpiActive">—</div></div>
+  </section>
+
+  <main class="wrap">
+    <!-- FLUXO -->
+    <section class="panel-tab is-active" id="tab-fluxo">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card__h">Fluxo do bot</div>
+          <div id="flowNodes" class="flow"></div>
+        </div>
+        <div class="card">
+          <div class="card__h">Ramo de objeções</div>
+          <p class="muted small">Respondidas a qualquer momento, sem sair do passo. Total por tipo (período todo):</p>
+          <div id="flowObjections" class="objlist"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- COPY -->
+    <section class="panel-tab" id="tab-copy">
+      <div class="card">
+        <div class="card__h">Copy de cada etapa</div>
+        <div id="copySteps" class="copy-list"></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card__h">Re-perguntas / validações</div>
+          <div id="copyReasks" class="copy-list"></div>
+        </div>
+        <div class="card">
+          <div class="card__h">Respostas de objeção</div>
+          <div id="copyObjections" class="copy-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONVERSÃO -->
+    <section class="panel-tab" id="tab-conversao">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card__h">Funil de conversão</div>
+          <div id="funnel" class="funnel"></div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="card__h">Objeções mais comuns</div>
+            <div id="objRank" class="objlist"></div>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card__h">Leads por dia (14 dias)</div>
+            <div id="perDay" class="perday"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AO VIVO -->
+    <section class="panel-tab" id="tab-aovivo">
+      <div class="card">
+        <div class="card__h">Leads recentes</div>
+        <div id="liveList" class="live"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">Painel read-only · os dados não saem deste servidor · atualiza sozinho a cada 5s</footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
