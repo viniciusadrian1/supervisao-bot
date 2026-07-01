@@ -98,6 +98,26 @@ function recordObjection(conv, key) {
   conv.objections[key] = (conv.objections[key] || 0) + 1;
 }
 
+/** Normaliza texto p/ casar o gatilho (minúsculo, sem acento, só alfanumérico). */
+function normTrigger(s) {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+const TRIGGER = normTrigger(config.triggerText);
+function matchesTrigger(text) {
+  return !!TRIGGER && normTrigger(text).includes(TRIGGER);
+}
+
+/** Preserva o pushName ao (re)iniciar uma conversa. */
+function keepName(conv, msg) {
+  const name = conv?.data?.pushName || msg.name || '';
+  return name ? { pushName: name } : {};
+}
+
 async function onHandoff(conv) {
   // Idempotente: se o lead já foi registrado (ex.: retomado por #bot e re-qualificado),
   // não duplica a linha no leads.jsonl nem o aviso ao gestor.
@@ -139,26 +159,34 @@ Pagamento: ${conv.data.pagamento || '-'}`;
 export async function handleIncoming(msg) {
   const phone = msg.from;
   const now = Date.now();
-
-  if (msg.messageId) provider.markRead([msg.messageId]).catch(() => {});
+  const text = msg.text || '';
+  const isTrigger = !!msg.isText && matchesTrigger(text);
+  const isResume = !!config.resumeKeyword && text.toLowerCase().trim() === config.resumeKeyword;
 
   let conv = await getConversation(phone);
-  if (!conv) conv = { phone, step: STEP.NEW, data: {}, createdAt: now };
+  const hasActiveFlow = conv && conv.step !== STEP.NEW && conv.step !== STEP.HANDOFF;
+
+  // ---- ATIVAÇÃO POR GATILHO ----
+  // O bot só INICIA o fluxo quando chega a mensagem-gatilho da LP (config.triggerText).
+  // Sem o gatilho e sem um fluxo em andamento, ele fica em SILÊNCIO — para não atrapalhar
+  // o atendimento humano (o vendedor conversando com o lead).
+  if (conv && conv.step === STEP.HANDOFF) {
+    // Em atendimento humano: silêncio total, salvo o comando de reativar (#bot).
+    if (!isResume) return;
+    conv = { phone, step: STEP.NEW, data: keepName(conv, msg), createdAt: conv.createdAt || now };
+  } else if (isTrigger) {
+    // (re)inicia o fluxo do zero
+    conv = { phone, step: STEP.NEW, data: keepName(conv, msg), createdAt: conv?.createdAt || now };
+  } else if (!hasActiveFlow) {
+    return; // não é o gatilho e não há fluxo em andamento -> silêncio (humano cuida)
+  }
+
+  // A partir daqui o bot VAI agir. Marca como lido só agora (não "lê" o que ignora).
+  if (msg.messageId) provider.markRead([msg.messageId]).catch(() => {});
   conv.lastUserAt = now;
   conv.updatedAt = now;
   conv.followUpSent = false; // o lead respondeu
   if (msg.name && !conv.data.pushName) conv.data.pushName = msg.name;
-
-  // Já em atendimento humano: bot em silêncio (exceto o comando de reativar).
-  if (conv.step === STEP.HANDOFF) {
-    if (config.resumeKeyword && (msg.text || '').toLowerCase().trim() === config.resumeKeyword) {
-      conv.step = STEP.NEW;
-      await saveConversation(phone, conv);
-      return handleIncoming({ ...msg, text: '' });
-    }
-    await saveConversation(phone, conv);
-    return;
-  }
 
   // Mensagem não-texto no meio do fluxo (figurinha, áudio, imagem)
   if (conv.step !== STEP.NEW && (!msg.isText || !msg.text)) {
@@ -166,8 +194,6 @@ export async function handleIncoming(msg) {
     await send(phone, M.fallbackText());
     return;
   }
-
-  const text = msg.text || '';
 
   // Interpreta a mensagem: IA (se houver chave OpenAI) entende objeção/nome/pagamento;
   // sem IA (ou se ela falhar) cai nas regras determinísticas. As RESPOSTAS são sempre

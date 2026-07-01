@@ -51,7 +51,17 @@ async function user(text, type = 'conversation') {
 }
 
 console.log('===== SIMULAÇÃO DO FLUXO =====');
-await user('Olá! Vim pelo site e quero dominar o Google Maps com um Tour 360º');
+
+// Mensagem que NÃO é o gatilho -> o bot deve IGNORAR (não atrapalha o atendimento humano).
+await user('Oi, tudo bem? Queria uma informação sobre preços');
+if (provider.sent.length !== 0) {
+  console.error('❌ FALHA: o bot respondeu uma mensagem que NÃO é o gatilho');
+  process.exit(1);
+}
+console.log('✅ bot ignorou a mensagem não-gatilho (silêncio p/ atendimento humano)\n');
+
+// Mensagem-GATILHO (pré-preenchida pelos botões da LP) -> ATIVA o bot.
+await user('Olá! Vim pelo site e quero meu Tour Virtual 360º no Google Maps 🚀');
 await user('😀👍'); // nome inválido (só emoji) -> deve RE-PERGUNTAR o nome
 await user('Pode me chamar de João'); // -> pede endereço
 await user('Fica na Rua das Flores, sem o cep agora'); // -> pede número+CEP

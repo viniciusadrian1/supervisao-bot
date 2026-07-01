@@ -59,7 +59,7 @@ async function user(text) {
   await handleIncoming(msg);
 }
 
-await user('Oi, vim do site'); // saudação
+await user('Olá! Vim pelo site e quero meu Tour Virtual 360º no Google Maps 🚀'); // GATILHO -> saudação
 await user('Aqui quem fala é o Joaquim'); // IA extrai nome (última palavra) -> Joaquim
 await user('Rua das Flores, 123 - 01310-100, São Paulo'); // endereço (determinístico) + vídeo
 await user('vamos sim'); // pós-vídeo -> site

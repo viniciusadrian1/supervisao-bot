@@ -33,6 +33,10 @@ forma de pagamento), responde objeções e **passa para um atendente humano no m
 - **Handoff:** ao terminar, o bot entra em silêncio naquele contato. Como o número é o
   mesmo, o atendente abre o **WhatsApp Web/app** e continua a conversa normalmente.
   Para reativar o bot num contato, mande a palavra `#bot` (configurável).
+- **Ativação por gatilho:** o bot **só inicia** o fluxo quando a 1ª mensagem contém o
+  texto pré-preenchido pelos botões da LP (`TRIGGER_TEXT`). Qualquer outra mensagem **não
+  ativa** o bot — ele fica em silêncio para **não atrapalhar o atendimento humano** (o
+  vendedor conversando com o lead). ⚠️ A mensagem de WhatsApp da LP deve conter esse texto.
 - **Anti-loop:** ignora mensagens enviadas por nós (`fromMe`/`wasSentByApi`) e de grupos.
 
 ---
