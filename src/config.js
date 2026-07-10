@@ -16,11 +16,6 @@ export const config = {
   ownerNumber: (process.env.OWNER_NUMBER || '').replace(/\D/g, ''),
   resumeKeyword: (process.env.RESUME_KEYWORD || '#bot').toLowerCase().trim(),
 
-  // Mensagem-gatilho: o bot SÓ inicia o fluxo quando a 1ª mensagem CONTÉM este texto
-  // (a mensagem pré-preenchida pelos botões da LP). Fora dele, o bot fica em silêncio
-  // para não atrapalhar o atendimento humano. A mensagem da LP deve conter este trecho.
-  triggerText: process.env.TRIGGER_TEXT || 'Vim pelo site e quero meu Tour Virtual 360',
-
   uazapi: {
     baseUrl: stripSlash(process.env.UAZAPI_BASE_URL || 'https://free.uazapi.com'),
     token: process.env.UAZAPI_TOKEN || '',

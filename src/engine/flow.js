@@ -98,20 +98,6 @@ function recordObjection(conv, key) {
   conv.objections[key] = (conv.objections[key] || 0) + 1;
 }
 
-/** Normaliza texto p/ casar o gatilho (minúsculo, sem acento, só alfanumérico). */
-function normTrigger(s) {
-  return (s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
-const TRIGGER = normTrigger(config.triggerText);
-function matchesTrigger(text) {
-  return !!TRIGGER && normTrigger(text).includes(TRIGGER);
-}
-
 /** Preserva o pushName ao (re)iniciar uma conversa. */
 function keepName(conv, msg) {
   const name = conv?.data?.pushName || msg.name || '';
@@ -160,26 +146,22 @@ export async function handleIncoming(msg) {
   const phone = msg.from;
   const now = Date.now();
   const text = msg.text || '';
-  const isTrigger = !!msg.isText && matchesTrigger(text);
   const isResume = !!config.resumeKeyword && text.toLowerCase().trim() === config.resumeKeyword;
 
   let conv = await getConversation(phone);
-  const hasActiveFlow = conv && conv.step !== STEP.NEW && conv.step !== STEP.HANDOFF;
 
-  // ---- ATIVAÇÃO POR GATILHO ----
-  // O bot só INICIA o fluxo quando chega a mensagem-gatilho da LP (config.triggerText).
-  // Sem o gatilho e sem um fluxo em andamento, ele fica em SILÊNCIO — para não atrapalhar
-  // o atendimento humano (o vendedor conversando com o lead).
-  if (conv && conv.step === STEP.HANDOFF) {
-    // Em atendimento humano: silêncio total, salvo o comando de reativar (#bot).
+  // ---- ATIVAÇÃO ----
+  // Primeiro contato de um número ATIVA o bot (qualquer mensagem de texto). Um número que
+  // já foi atendido (HANDOFF) NÃO re-dispara — fica em silêncio (salvo #bot), para não
+  // atropelar o atendimento humano nem responder o mesmo número mais de uma vez.
+  if (!conv) {
+    if (!msg.isText || !msg.text) return; // 1º contato sem texto (figurinha/áudio) -> ignora
+    conv = { phone, step: STEP.NEW, data: keepName(null, msg), createdAt: now };
+  } else if (conv.step === STEP.HANDOFF) {
     if (!isResume) return;
     conv = { phone, step: STEP.NEW, data: keepName(conv, msg), createdAt: conv.createdAt || now };
-  } else if (isTrigger) {
-    // (re)inicia o fluxo do zero
-    conv = { phone, step: STEP.NEW, data: keepName(conv, msg), createdAt: conv?.createdAt || now };
-  } else if (!hasActiveFlow) {
-    return; // não é o gatilho e não há fluxo em andamento -> silêncio (humano cuida)
   }
+  // senão: conversa em andamento -> continua o fluxo no switch abaixo.
 
   // A partir daqui o bot VAI agir. Marca como lido só agora (não "lê" o que ignora).
   if (msg.messageId) provider.markRead([msg.messageId]).catch(() => {});

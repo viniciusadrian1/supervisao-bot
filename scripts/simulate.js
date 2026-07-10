@@ -52,16 +52,8 @@ async function user(text, type = 'conversation') {
 
 console.log('===== SIMULAÇÃO DO FLUXO =====');
 
-// Mensagem que NÃO é o gatilho -> o bot deve IGNORAR (não atrapalha o atendimento humano).
+// Qualquer 1ª mensagem ATIVA o bot (não precisa ser um texto específico).
 await user('Oi, tudo bem? Queria uma informação sobre preços');
-if (provider.sent.length !== 0) {
-  console.error('❌ FALHA: o bot respondeu uma mensagem que NÃO é o gatilho');
-  process.exit(1);
-}
-console.log('✅ bot ignorou a mensagem não-gatilho (silêncio p/ atendimento humano)\n');
-
-// Mensagem-GATILHO (pré-preenchida pelos botões da LP) -> ATIVA o bot.
-await user('Olá! Vim pelo site e quero meu Tour Virtual 360º no Google Maps 🚀');
 await user('😀👍'); // nome inválido (só emoji) -> deve RE-PERGUNTAR o nome
 await user('Pode me chamar de João'); // -> pede endereço
 await user('Fica na Rua das Flores, sem o cep agora'); // -> pede número+CEP
@@ -71,5 +63,11 @@ await user('Tenho sim, @minhaempresa no Instagram'); // -> unidades
 await user('Só uma loja por enquanto'); // -> pagamento
 await user('Tem juros no parcelamento?'); // objeção em pagamento -> responde + RE-PERGUNTA (não fecha lixo)
 await user('Pode ser à vista'); // -> resumo + handoff
-await user('mais uma dúvida...'); // handoff -> silêncio
-console.log('\n===== FIM =====');
+const sentBefore = provider.sent.length;
+await user('mais uma dúvida...'); // já em HANDOFF -> deve ficar em SILÊNCIO
+if (provider.sent.length !== sentBefore) {
+  console.error('❌ FALHA: bot respondeu de novo um número já atendido (HANDOFF)');
+  process.exit(1);
+}
+console.log('\n✅ número já atendido (HANDOFF) não recebeu resposta de novo');
+console.log('===== FIM =====');
